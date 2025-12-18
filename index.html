@@ -2395,6 +2395,74 @@
             }
         };
         
+        // NEW: Detect Telegram Mini App environment
+        function detectTelegramMiniApp() {
+            // Method 1: Check for Telegram WebApp object
+            if (window.Telegram && window.Telegram.WebApp) {
+                return true;
+            }
+            
+            // Method 2: Check URL parameters (Telegram often adds these)
+            if (window.location.search.includes('tgWebApp') || 
+                window.location.hash.includes('tgWebApp')) {
+                return true;
+            }
+            
+            // Method 3: Check user agent
+            const userAgent = navigator.userAgent.toLowerCase();
+            if (userAgent.includes('telegram') || userAgent.includes('webview')) {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // NEW: Handle redirect in Telegram Mini App
+        function handleTelegramRedirect(url) {
+            // Method 1: Try openLink (newest Telegram WebApp API)
+            if (window.Telegram?.WebApp?.openLink) {
+                try {
+                    window.Telegram.WebApp.openLink(url);
+                    return true;
+                } catch (error) {
+                    console.error("Telegram openLink failed:", error);
+                }
+            }
+            
+            // Method 2: Try postEvent (alternative Telegram API)
+            if (window.Telegram?.WebApp?.postEvent) {
+                try {
+                    window.Telegram.WebApp.postEvent('web_app_open_link', { url: url });
+                    return true;
+                } catch (error) {
+                    console.error("Telegram postEvent failed:", error);
+                }
+            }
+            
+            // Method 3: Try to open in iframe (fallback for older Telegram versions)
+            try {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                
+                // Remove iframe after 5 seconds
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                }, 5000);
+                
+                return true;
+            } catch (error) {
+                console.error("Telegram iframe fallback failed:", error);
+            }
+            
+            // Method 4: Ultimate fallback - direct window.open
+            window.open(url, '_blank');
+            return true;
+        }
+        
         // App Initialization
         document.addEventListener('DOMContentLoaded', function() {
             // Set initial language
@@ -4967,7 +5035,7 @@
             downloadOptionsContainer.innerHTML = html;
         }
         
-        // UPDATED: Start Download with Affiliate Redirect
+        // UPDATED: Start Download with Affiliate Redirect - FIXED for Telegram Mini App
         function startDownload(movieId, serverName, quality, button, event) {
             const t = translations[currentLanguage];
             
@@ -4985,6 +5053,9 @@
                 return false;
             }
             
+            // Check if we're in Telegram Mini App
+            const isTelegramMiniApp = detectTelegramMiniApp();
+            
             // Get random affiliate link
             const affiliateLink = getRandomAffiliateLink();
             
@@ -4992,11 +5063,16 @@
                 // Track affiliate click
                 trackAffiliateClick(affiliateLink.name, movieId);
                 
-                // Open affiliate link
-                if (affiliateConfig.openInNewTab) {
-                    window.open(affiliateLink.url, '_blank');
+                // Special handling for Telegram Mini App
+                if (isTelegramMiniApp) {
+                    handleTelegramRedirect(affiliateLink.url);
                 } else {
-                    window.location.href = affiliateLink.url;
+                    // Normal browser handling
+                    if (affiliateConfig.openInNewTab) {
+                        window.open(affiliateLink.url, '_blank');
+                    } else {
+                        window.location.href = affiliateLink.url;
+                    }
                 }
                 
                 // Start actual download after delay
@@ -5014,16 +5090,33 @@
             return true;
         }
         
-        // NEW: Initiate Actual Download
+        // UPDATED: Initiate Actual Download with Telegram compatibility
         function initiateActualDownload(downloadUrl, movieId, serverName, quality, button) {
             const t = translations[currentLanguage];
             
-            // Create a temporary iframe for direct download
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = downloadUrl;
-            document.body.appendChild(iframe);
+            // Check if we should open in Telegram's browser
+            const isTelegramMiniApp = detectTelegramMiniApp();
             
+            if (isTelegramMiniApp && downloadUrl.startsWith('http')) {
+                // For Telegram Mini App, open download links in Telegram browser
+                handleTelegramRedirect(downloadUrl);
+                showNotification("Opening download link in Telegram browser...");
+            } else {
+                // For normal browsers, use iframe method
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = downloadUrl;
+                document.body.appendChild(iframe);
+                
+                // Remove iframe after 5 seconds
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                }, 5000);
+            }
+            
+            // Progress bar animation (visual feedback only)
             const progressId = `progress_option_${movieId}_${serverName}_${quality}`.replace(/\s+/g, '_');
             const progressBar = document.getElementById(`progress_${progressId}`);
             const progressBarInner = progressBar ? progressBar.querySelector('.download-progress-bar') : null;
@@ -5042,13 +5135,6 @@
                         setTimeout(() => {
                             progressBar.style.display = 'none';
                             progressBarInner.style.width = '0%';
-                            
-                            // Remove iframe after download
-                            setTimeout(() => {
-                                if (iframe.parentNode) {
-                                    iframe.parentNode.removeChild(iframe);
-                                }
-                            }, 1000);
                         }, 500);
                     }
                 }, 200);
