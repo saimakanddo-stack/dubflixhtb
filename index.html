@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <!-- Monetag SDK -->
-    <script src='//libtl.com/sdk.js' data-zone='10316324' data-sdk='show_10316324'></script>
+    <script src='//libtl.com/sdk.js' data-zone='10342771' data-sdk='show_10342771'></script>
     
     <style>
         * {
@@ -4281,7 +4281,7 @@
             let retryCount = parseInt(localStorage.getItem('monetagRetryCount') || '0');
             
             function check() {
-                if (typeof window.show_10316324 !== 'undefined' && typeof window.show_10316324 === 'function') {
+                if (typeof window.show_10342771 !== 'undefined' && typeof window.show_10342771 === 'function') {
                     monetagSDKLoaded = true;
                     localStorage.removeItem('monetagRetryCount');
                     console.log("Monetag SDK loaded successfully");
@@ -4434,8 +4434,8 @@
             
             return new Promise((resolve, reject) => {
                 try {
-                    if (typeof show_10316324 === 'function') {
-                        show_10316324().then(resolve).catch(reject);
+                    if (typeof show_10342771 === 'function') {
+                        show_10342771().then(resolve).catch(reject);
                     } else {
                         reject("Unlock ad SDK not available");
                     }
