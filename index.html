@@ -1611,6 +1611,132 @@
             background: #d1344e;
         }
         
+        /* Download Dialog Box */
+        .download-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .download-dialog-box {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 450px;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            border: 2px solid var(--highlight);
+            text-align: center;
+            animation: dialogFadeIn 0.3s ease;
+        }
+
+        @keyframes dialogFadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(-30px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+
+        .dialog-icon {
+            font-size: 3.5rem;
+            color: var(--highlight);
+            margin-bottom: 20px;
+        }
+
+        .dialog-message {
+            font-size: 1.1rem;
+            color: var(--text);
+            margin-bottom: 25px;
+            line-height: 1.6;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid var(--highlight);
+        }
+
+        .dialog-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .dialog-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 14px 24px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .dialog-btn-cancel {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            border: 2px solid var(--border);
+        }
+
+        .dialog-btn-cancel:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .dialog-btn-retry {
+            background: linear-gradient(135deg, var(--highlight), #ff2e63);
+            color: white;
+            border: 2px solid transparent;
+        }
+
+        .dialog-btn-retry:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(233, 69, 96, 0.4);
+        }
+
+        .dialog-language-switcher {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .lang-switch-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lang-switch-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--highlight);
+        }
+        
         /* Responsive Design - IMPROVED */
         @media (max-width: 768px) {
             .lang-switcher {
@@ -1713,6 +1839,22 @@
             
             .logo {
                 font-size: 1.3rem;
+            }
+            
+            .download-dialog-box {
+                padding: 25px 20px;
+            }
+            
+            .dialog-buttons {
+                flex-direction: column;
+            }
+            
+            .dialog-btn {
+                min-width: 100%;
+            }
+            
+            .dialog-message {
+                font-size: 1rem;
             }
         }
         
@@ -2157,6 +2299,38 @@
         </div>
     </div>
     
+    <!-- Download Dialog Box -->
+    <div class="download-dialog-overlay" id="downloadDialog">
+        <div class="download-dialog-box">
+            <div class="dialog-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            
+            <div class="dialog-message" id="dialogMessage">
+                ডাউনলোড শুরু হয়েছে! যদি "টেলিগ্রাম বট" স্বয়ংক্রিয়ভাবে ডাউনলোড না হয়, তাহলে নিচে "আবার চেষ্টা করুন" বাটনে ক্লিক করুন।
+            </div>
+            
+            <div class="dialog-buttons">
+                <button class="dialog-btn dialog-btn-cancel" id="dialogCancel">
+                    <i class="fas fa-times"></i>
+                    <span id="cancelBtnText">বন্ধ করুন</span>
+                </button>
+                
+                <button class="dialog-btn dialog-btn-retry" id="dialogRetry">
+                    <i class="fas fa-redo"></i>
+                    <span id="retryBtnText">আবার চেষ্টা করুন</span>
+                </button>
+            </div>
+            
+            <div class="dialog-language-switcher">
+                <button class="lang-switch-btn" id="dialogLangSwitch">
+                    <i class="fas fa-language"></i>
+                    <span id="dialogLangText">Switch to English</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Notification -->
     <div class="notification" id="notification">
         <i class="fas fa-check-circle"></i>
@@ -2270,6 +2444,30 @@
         // NEW: Search variables
         let currentSearchQuery = '';
         let searchTimeout = null;
+        
+        // NEW: Dialog box variables
+        let dialogDownloadUrl = '';
+        let dialogMovieId = '';
+        let dialogServerName = '';
+        let dialogQuality = '';
+        let dialogButton = null;
+        let dialogLanguage = 'bn'; // Default to Bengali
+
+        // NEW: Dialog translations
+        const dialogTranslations = {
+            bn: {
+                message: 'ডাউনলোড শুরু হয়েছে! যদি "টেলিগ্রাম বট" স্বয়ংক্রিয়ভাবে ডাউনলোড না হয়, তাহলে নিচে "আবার চেষ্টা করুন" বাটনে ক্লিক করুন।',
+                cancel: 'বন্ধ করুন',
+                retry: 'আবার চেষ্টা করুন',
+                switchLang: 'Switch to English'
+            },
+            en: {
+                message: 'Download has started! If "Telegram Bot" does not download automatically, click "Try again" below.',
+                cancel: 'Close',
+                retry: 'Try again',
+                switchLang: 'বাংলায় পরিবর্তন করুন'
+            }
+        };
         
         // Translations (All your existing translations remain unchanged)
         const translations = {
@@ -2497,7 +2695,110 @@
             
             // Initialize back to top button
             initBackToTop();
+            
+            // Initialize dialog box
+            initDialogBox();
         });
+        
+        // NEW: Initialize Dialog Box
+        function initDialogBox() {
+            // Dialog box event listeners
+            const dialogCancel = document.getElementById('dialogCancel');
+            if (dialogCancel) {
+                dialogCancel.addEventListener('click', closeDownloadDialog);
+            }
+            
+            const dialogRetry = document.getElementById('dialogRetry');
+            if (dialogRetry) {
+                dialogRetry.addEventListener('click', executeDownloadFromDialog);
+            }
+            
+            const dialogLangSwitch = document.getElementById('dialogLangSwitch');
+            if (dialogLangSwitch) {
+                dialogLangSwitch.addEventListener('click', switchDialogLanguage);
+            }
+            
+            // Close dialog when clicking outside
+            const downloadDialog = document.getElementById('downloadDialog');
+            if (downloadDialog) {
+                downloadDialog.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        closeDownloadDialog();
+                    }
+                });
+            }
+        }
+        
+        // NEW: Show Download Dialog
+        function showDownloadDialog() {
+            // Reset dialog language to default (Bengali)
+            dialogLanguage = 'bn';
+            updateDialogLanguage();
+            
+            // Show dialog after a short delay to ensure download has started
+            setTimeout(() => {
+                const dialog = document.getElementById('downloadDialog');
+                if (dialog) {
+                    dialog.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    
+                    // Auto-hide dialog after 30 seconds if user doesn't interact
+                    setTimeout(() => {
+                        if (dialog.style.display === 'flex') {
+                            closeDownloadDialog();
+                        }
+                    }, 30000);
+                }
+            }, 1500); // Show dialog 1.5 seconds after download starts
+        }
+        
+        // NEW: Update Dialog Language
+        function updateDialogLanguage() {
+            const t = dialogTranslations[dialogLanguage];
+            
+            document.getElementById('dialogMessage').textContent = t.message;
+            document.getElementById('cancelBtnText').textContent = t.cancel;
+            document.getElementById('retryBtnText').textContent = t.retry;
+            document.getElementById('dialogLangText').textContent = t.switchLang;
+        }
+        
+        // NEW: Switch Dialog Language
+        function switchDialogLanguage() {
+            dialogLanguage = dialogLanguage === 'bn' ? 'en' : 'bn';
+            updateDialogLanguage();
+        }
+        
+        // NEW: Close Download Dialog
+        function closeDownloadDialog() {
+            const dialog = document.getElementById('downloadDialog');
+            if (dialog) {
+                dialog.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            
+            // Clear stored data
+            dialogDownloadUrl = '';
+            dialogMovieId = '';
+            dialogServerName = '';
+            dialogQuality = '';
+            dialogButton = null;
+        }
+        
+        // NEW: Execute Download (from dialog) - Retry function
+        function executeDownloadFromDialog() {
+            if (dialogDownloadUrl && dialogButton) {
+                // Show retry notification
+                showNotification("Retrying download...");
+                
+                // Execute the actual download again
+                initiateActualDownload(dialogDownloadUrl, dialogMovieId, dialogServerName, dialogQuality, dialogButton);
+                
+                // Close dialog after a short delay
+                setTimeout(() => {
+                    closeDownloadDialog();
+                }, 1000);
+            }
+        }
         
         // Initialize Back to Top Button
         function initBackToTop() {
@@ -5035,7 +5336,7 @@
             downloadOptionsContainer.innerHTML = html;
         }
         
-        // UPDATED: Start Download with Affiliate Redirect - FIXED for Telegram Mini App
+        // UPDATED: Start Download with Affiliate Redirect + Dialog Box
         function startDownload(movieId, serverName, quality, button, event) {
             const t = translations[currentLanguage];
             
@@ -5059,6 +5360,13 @@
             // Get random affiliate link
             const affiliateLink = getRandomAffiliateLink();
             
+            // Store download data for dialog
+            dialogDownloadUrl = downloadUrl;
+            dialogMovieId = movieId;
+            dialogServerName = serverName;
+            dialogQuality = quality;
+            dialogButton = button;
+            
             if (affiliateLink && affiliateConfig.enabled) {
                 // Track affiliate click
                 trackAffiliateClick(affiliateLink.name, movieId);
@@ -5075,16 +5383,21 @@
                     }
                 }
                 
-                // Start actual download after delay
+                // Start actual download AND show dialog box
                 setTimeout(() => {
+                    // 1. Start the actual download automatically
                     initiateActualDownload(downloadUrl, movieId, serverName, quality, button);
+                    
+                    // 2. ALSO show the dialog box
+                    showDownloadDialog();
                 }, affiliateConfig.redirectDelay);
                 
                 showNotification("Redirecting to partner site...");
                 
             } else {
-                // Direct download if no affiliate link
+                // Direct download - start immediately AND show dialog
                 initiateActualDownload(downloadUrl, movieId, serverName, quality, button);
+                showDownloadDialog();
             }
             
             return true;
@@ -5094,50 +5407,60 @@
         function initiateActualDownload(downloadUrl, movieId, serverName, quality, button) {
             const t = translations[currentLanguage];
             
+            // Show starting notification
+            showNotification(t.toast_download_starting);
+            
             // Check if we should open in Telegram's browser
             const isTelegramMiniApp = detectTelegramMiniApp();
             
             if (isTelegramMiniApp && downloadUrl.startsWith('http')) {
                 // For Telegram Mini App, open download links in Telegram browser
                 handleTelegramRedirect(downloadUrl);
-                showNotification("Opening download link in Telegram browser...");
             } else {
                 // For normal browsers, use iframe method
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = downloadUrl;
-                document.body.appendChild(iframe);
-                
-                // Remove iframe after 5 seconds
-                setTimeout(() => {
-                    if (iframe.parentNode) {
-                        iframe.parentNode.removeChild(iframe);
-                    }
-                }, 5000);
+                try {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = downloadUrl;
+                    document.body.appendChild(iframe);
+                    
+                    // Remove iframe after 10 seconds
+                    setTimeout(() => {
+                        if (iframe.parentNode) {
+                            iframe.parentNode.removeChild(iframe);
+                        }
+                    }, 10000);
+                } catch (error) {
+                    console.error("Download iframe error:", error);
+                }
             }
             
             // Progress bar animation (visual feedback only)
-            const progressId = `progress_option_${movieId}_${serverName}_${quality}`.replace(/\s+/g, '_');
-            const progressBar = document.getElementById(`progress_${progressId}`);
-            const progressBarInner = progressBar ? progressBar.querySelector('.download-progress-bar') : null;
-            
-            if (progressBar && progressBarInner) {
-                progressBar.style.display = 'block';
+            try {
+                const progressId = `progress_option_${movieId}_${serverName}_${quality}`.replace(/\s+/g, '_');
+                const progressBar = document.getElementById(`progress_${progressId}`);
+                const progressBarInner = progressBar ? progressBar.querySelector('.download-progress-bar') : null;
                 
-                let progress = 0;
-                const interval = setInterval(() => {
-                    progress += Math.random() * 10;
-                    if (progress > 100) progress = 100;
-                    progressBarInner.style.width = progress + '%';
+                if (progressBar && progressBarInner) {
+                    progressBar.style.display = 'block';
                     
-                    if (progress >= 100) {
-                        clearInterval(interval);
-                        setTimeout(() => {
-                            progressBar.style.display = 'none';
-                            progressBarInner.style.width = '0%';
-                        }, 500);
-                    }
-                }, 200);
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 15;
+                        if (progress > 100) progress = 100;
+                        progressBarInner.style.width = progress + '%';
+                        
+                        if (progress >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                progressBar.style.display = 'none';
+                                progressBarInner.style.width = '0%';
+                            }, 500);
+                        }
+                    }, 200);
+                }
+            } catch (error) {
+                console.error("Progress bar error:", error);
             }
             
             // Add to download queue
@@ -5148,8 +5471,6 @@
                 url: downloadUrl,
                 timestamp: Date.now()
             });
-            
-            showNotification(t.toast_download_starting);
             
             processDownloadQueue();
             
@@ -5515,6 +5836,12 @@
                         cleanupSlider();
                     }
                     closeSidebar();
+                    
+                    // Also close download dialog
+                    const downloadDialog = document.getElementById('downloadDialog');
+                    if (downloadDialog && downloadDialog.style.display === 'flex') {
+                        closeDownloadDialog();
+                    }
                 }
             });
             
@@ -5582,6 +5909,9 @@
         window.filterByNew = filterByNew;
         window.filterByUpdated = filterByUpdated;
         window.showAllMovies = showAllMovies;
+        window.closeDownloadDialog = closeDownloadDialog;
+        window.executeDownloadFromDialog = executeDownloadFromDialog;
+        window.switchDialogLanguage = switchDialogLanguage;
         
         // Refresh movies function
         window.refreshMovies = function() {
