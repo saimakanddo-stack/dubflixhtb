@@ -2637,7 +2637,26 @@
                 }
             }
             
-            // Method 3: Ultimate fallback - direct window.open with _blank
+            // Method 3: Try to open in iframe (fallback for older Telegram versions)
+            try {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                
+                // Remove iframe after 5 seconds
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        iframe.parentNode.removeChild(iframe);
+                    }
+                }, 5000);
+                
+                return true;
+            } catch (error) {
+                console.error("Telegram iframe fallback failed:", error);
+            }
+            
+            // Method 4: Ultimate fallback - direct window.open
             window.open(url, '_blank', 'noopener,noreferrer');
             return true;
         }
@@ -2771,18 +2790,76 @@
                 // Show retry notification
                 showNotification("Retrying download...");
                 
-                // ✅ Open in new tab with _blank
-                if (dialogDownloadUrl.startsWith('http')) {
-                    window.open(dialogDownloadUrl, '_blank', 'noopener,noreferrer');
-                }
-                
                 // Execute the actual download again
-                initiateActualDownload(dialogDownloadUrl, dialogMovieId, dialogServerName, dialogQuality, dialogButton);
+                initiateDialogDownload(dialogDownloadUrl, dialogMovieId, dialogServerName, dialogQuality, dialogButton);
                 
                 // Close dialog after a short delay
                 setTimeout(() => {
                     closeDownloadDialog();
                 }, 1000);
+            }
+        }
+        
+        // NEW: Initiate Download from Dialog Box (opens in new tab)
+        function initiateDialogDownload(downloadUrl, movieId, serverName, quality) {
+            const t = translations[currentLanguage];
+            
+            // Show starting notification
+            showNotification(t.toast_download_starting);
+            
+            // Always open in new tab from dialog
+            if (downloadUrl.startsWith('http')) {
+                try {
+                    // Open in new tab with security features
+                    const newTab = window.open(downloadUrl, '_blank', 'noopener,noreferrer');
+                    
+                    // Check if popup was blocked
+                    if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
+                        // Popup blocked, show alternative
+                        showNotification("Popup blocked! Please allow popups for this site.", true);
+                        
+                        // Fallback: show direct link
+                        setTimeout(() => {
+                            if (confirm("Popup blocked. Click OK to copy download link to clipboard.")) {
+                                navigator.clipboard.writeText(downloadUrl).then(() => {
+                                    showNotification("Download link copied to clipboard!");
+                                });
+                            }
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.error("New tab open error:", error);
+                    // Ultimate fallback
+                    window.location.href = downloadUrl;
+                }
+            }
+            
+            // Progress bar animation (visual feedback only)
+            try {
+                const progressId = `progress_option_${movieId}_${serverName}_${quality}`.replace(/\s+/g, '_');
+                const progressBar = document.getElementById(`progress_${progressId}`);
+                const progressBarInner = progressBar ? progressBar.querySelector('.download-progress-bar') : null;
+                
+                if (progressBar && progressBarInner) {
+                    progressBar.style.display = 'block';
+                    
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += Math.random() * 15;
+                        if (progress > 100) progress = 100;
+                        progressBarInner.style.width = progress + '%';
+                        
+                        if (progress >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                progressBar.style.display = 'none';
+                                progressBarInner.style.width = '0%';
+                            }, 500);
+                        }
+                    }, 200);
+                }
+            } catch (error) {
+                console.error("Progress bar error:", error);
             }
         }
         
@@ -5361,7 +5438,7 @@
                 if (isTelegramMiniApp) {
                     handleTelegramRedirect(affiliateLink.url);
                 } else {
-                    // ✅ নতুন ট্যাবে ওপেন হবে
+                    // Normal browser handling - নতুন ট্যাবে খুলবে
                     window.open(affiliateLink.url, '_blank', 'noopener,noreferrer');
                 }
                 
@@ -5398,11 +5475,8 @@
             if (isTelegramMiniApp && downloadUrl.startsWith('http')) {
                 // For Telegram Mini App, open download links in Telegram browser
                 handleTelegramRedirect(downloadUrl);
-            } else if (downloadUrl.startsWith('http')) {
-                // ✅ সাধারণ ব্রাউজারে নতুন ট্যাবে ওপেন হবে
-                window.open(downloadUrl, '_blank', 'noopener,noreferrer');
             } else {
-                // For non-HTTP links or fallback
+                // For normal browsers, use iframe method (normal behavior)
                 try {
                     const iframe = document.createElement('iframe');
                     iframe.style.display = 'none';
@@ -5622,7 +5696,7 @@
                                     <i class="fas fa-search"></i>
                                     <h3>${t.noMovies}</h3>
                                     <p>Try a different search term</p>
-                                </div>
+                            </div>
                             `;
                             showSearchResultsInfo(0, query);
                             if (searchLoading) searchLoading.style.display = 'none';
